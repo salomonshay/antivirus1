@@ -44,9 +44,7 @@ def scan_directory(directory_path):
             file_path = os.path.join(root, file)
             print(f"Scanning: {file_path}")
             analysis_id = scan_file(file_path)
-            
-            # Optional: add a small delay to avoid rate limiting
-            time.sleep(14)
+            time.sleep(15)
             
             if analysis_id:
                 response = get_res(analysis_id)
@@ -59,21 +57,33 @@ def scan_directory(directory_path):
                         "stats": stats
                     })
                     print(f"Stats: {stats}\n")
+                else:
+                    print(f"Failed to scan file: {file_path}\n")
     
     return results
 
 def get_res(analysis_id2use):
     if analysis_id2use:
         result_url = urlresult + analysis_id2use
-        Fin_response = requests.get(result_url, headers=headers)
-        return Fin_response
+        max_attempts = 30  
+        for attempt in range(max_attempts):
+            Fin_response = requests.get(result_url, headers=headers)
+            data = Fin_response.json()
+            status = data.get("data", {}).get("attributes", {}).get("status")
+            
+            if status == "completed":
+                return Fin_response
+            
+            print(f"Status: {status}, attempt {attempt + 1}/{max_attempts}")
+            time.sleep(2) 
+        
+        print(f"Timeout: סריקה של {analysis_id2use} לא הסתיימה בזמן")
+        return None
     else:
         print("No analysis ID provided.")
         return None
 
-def printdata_of_one_file(analysis_id):
-    print()
-
+#נסיון סריקת קובץ בודד
 analysis_id = scan_file(file_path)
 response = get_res(analysis_id)
 print("-----------------------------------------------")
@@ -81,4 +91,6 @@ data = response.json()
 stats = data.get("data", {}).get("attributes", {}).get("stats")
 print(stats)
 print("-----------------------------------------------")
+
+# נסיון סריקת תיקיה שלמה
 print(scan_directory(dir_path))
